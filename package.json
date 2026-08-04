@@ -1,0 +1,16 @@
+{
+  "name": "nigeria-investment-screener",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,client -c green,cyan \"npm run dev -w server\" \"npm run dev -w client\"",
+    "seed": "npm run seed -w server",
+    "build": "npm run build -w client && npm run build -w server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}
