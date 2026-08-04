@@ -8,7 +8,7 @@ import type { Company, FinancialYear } from "./types.js";
 // investment decision (see README).
 
 interface Seed {
-  company: Company;
+  company: Omit<Company, "price_source" | "price_updated_at">;
   financials: FinancialYear[];
 }
 

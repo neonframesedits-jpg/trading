@@ -14,7 +14,9 @@ db.exec(`
     name TEXT NOT NULL,
     sector TEXT NOT NULL,
     description TEXT NOT NULL,
-    price REAL NOT NULL
+    price REAL NOT NULL,
+    price_source TEXT NOT NULL DEFAULT 'seed',
+    price_updated_at TEXT
   );
 
   CREATE TABLE IF NOT EXISTS financials (
@@ -73,4 +75,32 @@ db.exec(`
     auth TEXT NOT NULL,
     created_at TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS fx_rates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    pair TEXT NOT NULL,
+    rate REAL NOT NULL,
+    source TEXT NOT NULL,
+    fetched_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS data_refresh_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source TEXT NOT NULL,
+    status TEXT NOT NULL,
+    message TEXT,
+    records_updated INTEGER NOT NULL DEFAULT 0,
+    started_at TEXT NOT NULL,
+    finished_at TEXT NOT NULL
+  );
 `);
+
+// Best-effort migration for databases created before price_source/price_updated_at existed.
+const companyColumns = db.prepare("PRAGMA table_info(companies)").all() as { name: string }[];
+const columnNames = new Set(companyColumns.map((c) => c.name));
+if (!columnNames.has("price_source")) {
+  db.exec("ALTER TABLE companies ADD COLUMN price_source TEXT NOT NULL DEFAULT 'seed'");
+}
+if (!columnNames.has("price_updated_at")) {
+  db.exec("ALTER TABLE companies ADD COLUMN price_updated_at TEXT");
+}

@@ -5,6 +5,8 @@ export interface Company {
   sector: string;
   description: string;
   price: number;
+  price_source: string;
+  price_updated_at: string | null;
 }
 
 export interface ScoredCompany extends Company {
@@ -157,4 +159,32 @@ export function fetchCheckin(): Promise<{ shouldPrompt: boolean; reason?: string
 
 export function dismissCheckin(): Promise<void> {
   return deviceRequest("/api/goals/checkin/dismiss", { method: "POST" });
+}
+
+export interface RefreshLogEntry {
+  id: number;
+  source: string;
+  status: string;
+  message: string | null;
+  records_updated: number;
+  started_at: string;
+  finished_at: string;
+}
+
+export interface DataStatus {
+  sources: RefreshLogEntry[];
+  usdRate: { rate: number; fetchedAt: string } | null;
+  liveCompanyCount: number;
+  totalCompanies: number;
+  usingLiveData: boolean;
+}
+
+export function fetchDataStatus(): Promise<DataStatus> {
+  return get("/api/data/status");
+}
+
+export async function triggerDataRefresh(): Promise<unknown> {
+  const res = await fetch("/api/data/refresh", { method: "POST" });
+  if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+  return res.json();
 }

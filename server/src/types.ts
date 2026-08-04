@@ -5,6 +5,8 @@ export interface Company {
   sector: string;
   description: string;
   price: number;
+  price_source: string;
+  price_updated_at: string | null;
 }
 
 export interface FinancialYear {

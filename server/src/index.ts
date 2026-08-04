@@ -5,7 +5,9 @@ import { scoreAllCompanies } from "./scoring.js";
 import { computeProjection } from "./calculator.js";
 import { goalsRouter } from "./goals.js";
 import { pushRouter } from "./pushRoutes.js";
+import { dataRouter } from "./dataRoutes.js";
 import { startScheduler } from "./scheduler.js";
+import { startDataRefreshScheduler } from "./datasources/scheduler.js";
 import type { Company, FinancialYear } from "./types.js";
 
 const app = express();
@@ -14,14 +16,21 @@ app.use(express.json());
 
 app.use("/api/goals", goalsRouter);
 app.use("/api/push", pushRouter);
+app.use("/api/data", dataRouter);
+
+function fundamentalsDisclaimer() {
+  return "Financial fundamentals (EPS, ROE, debt/equity, revenue growth) are still reference/illustrative data pending deeper integration — verify against NGX filings and audited reports before investing. This is informational, not investment advice.";
+}
 
 app.get("/api/companies", (_req, res) => {
-  res.json({
-    generatedAt: new Date().toISOString(),
-    disclaimer:
-      "Scores and financials are reference/illustrative data for this demo, not a live market feed. Verify against NGX filings before investing. This is informational, not investment advice.",
-    companies: scoreAllCompanies(),
-  });
+  const companies = scoreAllCompanies();
+  const liveCount = companies.filter((c) => c.price_source !== "seed").length;
+  const disclaimer =
+    liveCount > 0
+      ? `Prices for ${liveCount} of ${companies.length} companies were pulled from a live source (see each company for its source and timestamp). ${fundamentalsDisclaimer()}`
+      : `Scores and financials are reference/illustrative data for this demo, not a live market feed. Verify against NGX filings before investing. This is informational, not investment advice.`;
+
+  res.json({ generatedAt: new Date().toISOString(), disclaimer, companies });
 });
 
 app.get("/api/companies/:id", (req, res) => {
@@ -34,13 +43,12 @@ app.get("/api/companies/:id", (req, res) => {
 
   const scored = scoreAllCompanies().find((c) => c.id === req.params.id);
 
-  res.json({
-    company,
-    history,
-    scored,
-    disclaimer:
-      "Reference/illustrative data for this demo, not a live market feed. Verify against NGX filings and the company's audited reports before investing.",
-  });
+  const disclaimer =
+    company.price_source !== "seed"
+      ? `Price sourced from ${company.price_source}, last refreshed ${company.price_updated_at}. ${fundamentalsDisclaimer()}`
+      : `Reference/illustrative data for this demo, not a live market feed. Verify against NGX filings and the company's audited reports before investing.`;
+
+  res.json({ company, history, scored, disclaimer });
 });
 
 app.post("/api/calculate", (req, res) => {
@@ -57,4 +65,5 @@ const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 app.listen(PORT, () => {
   console.log(`API listening on http://localhost:${PORT}`);
   startScheduler();
+  startDataRefreshScheduler();
 });

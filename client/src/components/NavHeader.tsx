@@ -17,6 +17,9 @@ export function NavHeader() {
           <NavLink to="/goals" active={location.pathname.startsWith("/goals")}>
             Goals
           </NavLink>
+          <NavLink to="/data-status" active={location.pathname.startsWith("/data-status")}>
+            Data status
+          </NavLink>
         </nav>
       </div>
     </header>

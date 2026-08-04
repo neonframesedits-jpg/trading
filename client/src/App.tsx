@@ -2,6 +2,7 @@ import { Route, Routes } from "react-router-dom";
 import { Home } from "./pages/Home";
 import { CompanyDetail } from "./pages/CompanyDetail";
 import { Goals } from "./pages/Goals";
+import { DataStatus } from "./pages/DataStatus";
 import { NavHeader } from "./components/NavHeader";
 import { CheckinPrompt } from "./components/CheckinPrompt";
 
@@ -13,6 +14,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/company/:id" element={<CompanyDetail />} />
         <Route path="/goals" element={<Goals />} />
+        <Route path="/data-status" element={<DataStatus />} />
       </Routes>
       <CheckinPrompt />
     </div>
