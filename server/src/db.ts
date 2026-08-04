@@ -37,4 +37,40 @@ db.exec(`
     tag TEXT NOT NULL,
     source TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS devices (
+    id TEXT PRIMARY KEY,
+    created_at TEXT NOT NULL,
+    last_prompted_at TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS goals (
+    id TEXT PRIMARY KEY,
+    device_id TEXT NOT NULL REFERENCES devices(id),
+    name TEXT NOT NULL,
+    category TEXT NOT NULL,
+    target_amount REAL NOT NULL,
+    target_date TEXT,
+    committed_amount REAL NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS goal_contributions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    goal_id TEXT NOT NULL REFERENCES goals(id),
+    amount REAL NOT NULL,
+    company_symbol TEXT,
+    note TEXT,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    device_id TEXT NOT NULL REFERENCES devices(id),
+    endpoint TEXT NOT NULL UNIQUE,
+    p256dh TEXT NOT NULL,
+    auth TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  );
 `);

@@ -3,11 +3,17 @@ import cors from "cors";
 import { db } from "./db.js";
 import { scoreAllCompanies } from "./scoring.js";
 import { computeProjection } from "./calculator.js";
+import { goalsRouter } from "./goals.js";
+import { pushRouter } from "./pushRoutes.js";
+import { startScheduler } from "./scheduler.js";
 import type { Company, FinancialYear } from "./types.js";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+app.use("/api/goals", goalsRouter);
+app.use("/api/push", pushRouter);
 
 app.get("/api/companies", (_req, res) => {
   res.json({
@@ -50,4 +56,5 @@ app.post("/api/calculate", (req, res) => {
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 app.listen(PORT, () => {
   console.log(`API listening on http://localhost:${PORT}`);
+  startScheduler();
 });

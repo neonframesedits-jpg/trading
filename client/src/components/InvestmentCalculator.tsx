@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Area,
   CartesianGrid,
@@ -9,7 +10,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { fetchProjection, formatNaira, formatPercent, type ProjectionResult } from "../api";
+import { contributeToGoal, fetchGoals, fetchProjection, formatNaira, formatPercent, type Goal, type ProjectionResult } from "../api";
 
 const PRESETS = [50000, 100000, 500000, 1000000];
 
@@ -19,6 +20,38 @@ export function InvestmentCalculator({ companyId }: { companyId: string }) {
   const [result, setResult] = useState<ProjectionResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [goals, setGoals] = useState<Goal[] | null>(null);
+  const [selectedGoalId, setSelectedGoalId] = useState<string>("");
+  const [committing, setCommitting] = useState(false);
+  const [commitResult, setCommitResult] = useState<{ goalName: string; progressPct: number; justCompleted: boolean } | null>(null);
+
+  useEffect(() => {
+    fetchGoals()
+      .then((r) => {
+        setGoals(r.goals);
+        if (r.goals.length > 0) setSelectedGoalId(r.goals[0].id);
+      })
+      .catch(() => {});
+  }, []);
+
+  async function commitToGoal() {
+    if (!result || !selectedGoalId) return;
+    setCommitting(true);
+    setCommitResult(null);
+    try {
+      const { goal, justCompleted } = await contributeToGoal(selectedGoalId, {
+        amount: result.amount,
+        companySymbol: result.company.symbol,
+      });
+      setCommitResult({ goalName: goal.name, progressPct: goal.progressPct, justCompleted });
+      setGoals((gs) => gs?.map((g) => (g.id === goal.id ? goal : g)) ?? null);
+    } catch {
+      setError("Couldn't commit to that goal — try again.");
+    } finally {
+      setCommitting(false);
+    }
+  }
 
   async function run(nextAmount = amount, nextYears = years) {
     setLoading(true);
@@ -131,6 +164,48 @@ export function InvestmentCalculator({ companyId }: { companyId: string }) {
               </li>
             ))}
           </ul>
+
+          <div className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
+            {goals && goals.length > 0 ? (
+              <>
+                <p className="text-sm text-neutral-300">Put this {formatNaira(result.amount)} toward a goal:</p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <select
+                    value={selectedGoalId}
+                    onChange={(e) => setSelectedGoalId(e.target.value)}
+                    className="rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-white outline-none focus:border-emerald-600"
+                  >
+                    {goals.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.name} ({g.progressPct.toFixed(0)}%)
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={commitToGoal}
+                    disabled={committing}
+                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+                  >
+                    {committing ? "Committing…" : "Commit"}
+                  </button>
+                </div>
+                {commitResult && (
+                  <p className="mt-3 text-sm font-medium text-emerald-400">
+                    {commitResult.justCompleted
+                      ? `Goal reached — "${commitResult.goalName}" is fully funded.`
+                      : `Nice — "${commitResult.goalName}" is now ${commitResult.progressPct.toFixed(1)}% funded.`}
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-neutral-400">
+                <Link to="/goals" className="text-emerald-400 underline">
+                  Set a goal
+                </Link>{" "}
+                to see how this investment moves you toward something concrete — a down payment, a car, business capital.
+              </p>
+            )}
+          </div>
         </div>
       )}
     </div>

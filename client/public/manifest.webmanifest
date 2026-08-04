@@ -1,0 +1,12 @@
+{
+  "name": "NEON Invest",
+  "short_name": "NEON Invest",
+  "description": "Nigeria investment screener with goal tracking.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b0e14",
+  "theme_color": "#0b0e14",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
