@@ -16,14 +16,18 @@ export class FetchError extends Error {
   }
 }
 
-export async function fetchHtml(url: string, timeoutMs = 15000): Promise<string> {
+export function fetchHtml(url: string, timeoutMs = 15000): Promise<string> {
+  return fetchText(url, "text/html,application/xhtml+xml", timeoutMs);
+}
+
+export async function fetchText(url: string, accept: string, timeoutMs = 15000): Promise<string> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch(url, {
       headers: {
         "User-Agent": BROWSER_USER_AGENT,
-        Accept: "text/html,application/xhtml+xml",
+        Accept: accept,
       },
       signal: controller.signal,
     });

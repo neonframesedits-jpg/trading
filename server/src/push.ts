@@ -1,11 +1,13 @@
 import webpush from "web-push";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { db } from "./db.js";
+import { db, dataDir } from "./db.js";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const vapidPath = path.join(__dirname, "..", "vapid.json");
+// Keys must stay stable across deploys, or every existing push
+// subscription silently stops working. Prefer env vars; otherwise keep the
+// generated file next to the database so it lives on the same persistent
+// volume.
+const vapidPath = path.join(dataDir, "vapid.json");
 
 interface VapidKeys {
   publicKey: string;
@@ -13,6 +15,9 @@ interface VapidKeys {
 }
 
 function loadOrCreateVapidKeys(): VapidKeys {
+  if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+    return { publicKey: process.env.VAPID_PUBLIC_KEY, privateKey: process.env.VAPID_PRIVATE_KEY };
+  }
   if (fs.existsSync(vapidPath)) {
     return JSON.parse(fs.readFileSync(vapidPath, "utf-8"));
   }
@@ -23,7 +28,11 @@ function loadOrCreateVapidKeys(): VapidKeys {
 
 export const vapidKeys = loadOrCreateVapidKeys();
 
-webpush.setVapidDetails("mailto:no-reply@neoninvest.local", vapidKeys.publicKey, vapidKeys.privateKey);
+webpush.setVapidDetails(
+  process.env.VAPID_SUBJECT ?? "mailto:no-reply@neoninvest.local",
+  vapidKeys.publicKey,
+  vapidKeys.privateKey
+);
 
 export interface PushSubscriptionInput {
   endpoint: string;

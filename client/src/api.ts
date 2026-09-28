@@ -179,12 +179,44 @@ export interface DataStatus {
   usingLiveData: boolean;
 }
 
+export interface NewsArticle {
+  id: number;
+  url: string;
+  title: string;
+  summary: string | null;
+  source_name: string;
+  domain: string;
+  tier: 1 | 2 | 3;
+  language: string | null;
+  source_country: string | null;
+  published_at: string | null;
+  fetched_at: string;
+  origin: string;
+  theme: string | null;
+  companies: { id: string; symbol: string; name: string; match_reason: string }[];
+}
+
+export function fetchCompanyNews(companyId: string): Promise<{ articles: NewsArticle[] }> {
+  return get(`/api/companies/${companyId}/news`);
+}
+
+export function fetchNews(filter: { theme?: string; linkedOnly?: boolean } = {}): Promise<{ themes: string[]; articles: NewsArticle[] }> {
+  const params = new URLSearchParams();
+  if (filter.theme) params.set("theme", filter.theme);
+  if (filter.linkedOnly) params.set("linked", "1");
+  const query = params.toString();
+  return get(`/api/news${query ? `?${query}` : ""}`);
+}
+
 export function fetchDataStatus(): Promise<DataStatus> {
   return get("/api/data/status");
 }
 
 export async function triggerDataRefresh(): Promise<unknown> {
   const res = await fetch("/api/data/refresh", { method: "POST" });
-  if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.error ?? `Request failed: ${res.status}`);
+  }
   return res.json();
 }

@@ -2,15 +2,11 @@ import { db } from "../db.js";
 import { fetchHtml } from "./fetchHtml.js";
 import { extractTables, findMatchingTable, parseNumeric } from "./parseTable.js";
 import { logRefresh } from "./refreshLog.js";
+import { CBN_RATE_HEADERS } from "./headerPatterns.js";
 
 // CBN publishes official exchange rates on a public page. Unverified from
 // this session (outbound access blocked) — see README before relying on this.
 const CBN_RATES_URL = "https://www.cbn.gov.ng/rates/ExchRateByCurrency.html";
-
-const HEADER_PATTERNS = {
-  currency: /currency/i,
-  rate: /rate|buying|central/i,
-};
 
 export interface CbnRateRefreshResult {
   status: "success" | "error" | "no-match";
@@ -25,12 +21,12 @@ export async function refreshCbnRates(): Promise<CbnRateRefreshResult> {
   try {
     const html = await fetchHtml(CBN_RATES_URL);
     const tables = extractTables(html);
-    const match = findMatchingTable(tables, HEADER_PATTERNS);
+    const match = findMatchingTable(tables, CBN_RATE_HEADERS);
 
     if (!match) {
       result = {
         status: "no-match",
-        message: "No table matched expected currency/rate headers. Inspect the live HTML and update HEADER_PATTERNS in cbnRates.ts.",
+        message: "No table matched expected currency/rate headers. Inspect the live HTML and update CBN_RATE_HEADERS in headerPatterns.ts.",
         ratesFound: 0,
       };
     } else {

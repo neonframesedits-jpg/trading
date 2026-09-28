@@ -54,22 +54,29 @@ export function extractTables(html: string): ParsedTable[] {
 
 /**
  * Finds the table whose headers best match a set of keyword patterns
- * (e.g. { symbol: /symbol|ticker/i, price: /price|close/i }). Returns the
- * matched table plus a column-name -> header-index map, or null if no
- * table matches enough keywords.
+ * (e.g. { symbol: /symbol|ticker/i, price: /price|close/i }). A column can
+ * list several patterns in priority order — e.g. prefer "Central Rate" over
+ * any other rate column — and the first pattern that matches any header
+ * wins. Returns the matched table plus a column-name -> header-index map, or
+ * null if no table matches enough keywords.
  */
 export function findMatchingTable(
   tables: ParsedTable[],
-  keywordPatterns: Record<string, RegExp>,
+  keywordPatterns: Record<string, RegExp | RegExp[]>,
   minMatches = Object.keys(keywordPatterns).length
 ): { table: ParsedTable; columnIndex: Record<string, number> } | null {
   let best: { table: ParsedTable; columnIndex: Record<string, number>; score: number } | null = null;
 
   for (const table of tables) {
     const columnIndex: Record<string, number> = {};
-    for (const [key, pattern] of Object.entries(keywordPatterns)) {
-      const idx = table.headers.findIndex((h) => pattern.test(h));
-      if (idx !== -1) columnIndex[key] = idx;
+    for (const [key, patterns] of Object.entries(keywordPatterns)) {
+      for (const pattern of Array.isArray(patterns) ? patterns : [patterns]) {
+        const idx = table.headers.findIndex((h) => pattern.test(h));
+        if (idx !== -1) {
+          columnIndex[key] = idx;
+          break;
+        }
+      }
     }
     const score = Object.keys(columnIndex).length;
     if (score >= minMatches && (!best || score > best.score)) {
@@ -82,6 +89,9 @@ export function findMatchingTable(
 
 export function parseNumeric(raw: string): number | null {
   const cleaned = raw.replace(/[,₦%\s]/g, "").replace(/^\((.*)\)$/, "-$1");
+  // Number("") is 0, which would turn an empty table cell into a real-looking
+  // value (e.g. overwriting a company's dividend with ₦0).
+  if (cleaned === "") return null;
   const n = Number(cleaned);
   return Number.isFinite(n) ? n : null;
 }

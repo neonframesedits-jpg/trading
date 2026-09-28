@@ -1,9 +1,18 @@
 import Database from "better-sqlite3";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-export const db = new Database(path.join(__dirname, "..", "data.sqlite"));
+
+// In production, DATABASE_PATH should point at persistent storage (e.g. a
+// Railway Volume mounted at /data) — a container's own disk is wiped on
+// every redeploy. Locally it defaults to server/data.sqlite.
+const databasePath = process.env.DATABASE_PATH ?? path.join(__dirname, "..", "data.sqlite");
+export const dataDir = path.dirname(databasePath);
+fs.mkdirSync(dataDir, { recursive: true });
+
+export const db = new Database(databasePath);
 
 db.pragma("journal_mode = WAL");
 
@@ -31,13 +40,30 @@ db.exec(`
     PRIMARY KEY (company_id, year)
   );
 
-  CREATE TABLE IF NOT EXISTS news_events (
+  CREATE TABLE IF NOT EXISTS news_articles (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    url TEXT NOT NULL,
+    url_key TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL,
+    summary TEXT,
+    source_name TEXT NOT NULL,
+    domain TEXT NOT NULL,
+    tier INTEGER NOT NULL,
+    language TEXT,
+    source_country TEXT,
+    published_at TEXT,
+    fetched_at TEXT NOT NULL,
+    origin TEXT NOT NULL,
+    theme TEXT
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_news_articles_published ON news_articles(published_at);
+
+  CREATE TABLE IF NOT EXISTS article_companies (
+    article_id INTEGER NOT NULL REFERENCES news_articles(id),
     company_id TEXT NOT NULL REFERENCES companies(id),
-    date TEXT NOT NULL,
-    headline TEXT NOT NULL,
-    tag TEXT NOT NULL,
-    source TEXT NOT NULL
+    match_reason TEXT NOT NULL,
+    PRIMARY KEY (article_id, company_id)
   );
 
   CREATE TABLE IF NOT EXISTS devices (

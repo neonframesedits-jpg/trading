@@ -1,3 +1,4 @@
+import { pathToFileURL } from "node:url";
 import { db } from "./db.js";
 import type { Company, FinancialYear } from "./types.js";
 
@@ -165,25 +166,39 @@ const seeds: Seed[] = [
   },
 ];
 
-const insertCompany = db.prepare(`
-  INSERT OR REPLACE INTO companies (id, symbol, name, sector, description, price)
-  VALUES (@id, @symbol, @name, @sector, @description, @price)
-`);
+export function seedDatabase() {
+  const insertCompany = db.prepare(`
+    INSERT OR REPLACE INTO companies (id, symbol, name, sector, description, price)
+    VALUES (@id, @symbol, @name, @sector, @description, @price)
+  `);
 
-const insertFinancial = db.prepare(`
-  INSERT OR REPLACE INTO financials (company_id, year, price, dividend_per_share, eps, roe, debt_to_equity, revenue_growth)
-  VALUES (@company_id, @year, @price, @dividend_per_share, @eps, @roe, @debt_to_equity, @revenue_growth)
-`);
+  const insertFinancial = db.prepare(`
+    INSERT OR REPLACE INTO financials (company_id, year, price, dividend_per_share, eps, roe, debt_to_equity, revenue_growth)
+    VALUES (@company_id, @year, @price, @dividend_per_share, @eps, @roe, @debt_to_equity, @revenue_growth)
+  `);
 
-const run = db.transaction(() => {
-  for (const seed of seeds) {
-    insertCompany.run(seed.company);
-    for (const f of seed.financials) {
-      insertFinancial.run({ company_id: seed.company.id, ...f });
+  db.transaction(() => {
+    for (const seed of seeds) {
+      insertCompany.run(seed.company);
+      for (const f of seed.financials) {
+        insertFinancial.run({ company_id: seed.company.id, ...f });
+      }
     }
-  }
-});
+  })();
 
-run();
+  return { companies: seeds.length, financialYears: seeds.reduce((n, s) => n + s.financials.length, 0) };
+}
 
-console.log(`Seeded ${seeds.length} companies with ${seeds.reduce((n, s) => n + s.financials.length, 0)} financial-year records.`);
+// Seeds only when there's nothing there yet, so a fresh production volume
+// gets reference data but a live-updated database is never overwritten.
+export function seedIfEmpty(): boolean {
+  const { n } = db.prepare("SELECT COUNT(*) AS n FROM companies").get() as { n: number };
+  if (n > 0) return false;
+  seedDatabase();
+  return true;
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const { companies, financialYears } = seedDatabase();
+  console.log(`Seeded ${companies} companies with ${financialYears} financial-year records.`);
+}

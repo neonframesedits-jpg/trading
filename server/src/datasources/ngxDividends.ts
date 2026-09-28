@@ -3,18 +3,13 @@ import { db } from "../db.js";
 import { fetchHtml } from "./fetchHtml.js";
 import { extractTables, findMatchingTable, parseNumeric } from "./parseTable.js";
 import { logRefresh } from "./refreshLog.js";
+import { NGX_DIVIDEND_HEADERS } from "./headerPatterns.js";
 
 // Dividend/corporate-action pages are much less standardized than a price
 // list — some exchanges publish these as tables, others as article-style
 // lists. This is the most likely of the three fetchers to need rework once
 // checked against the real page. Unverified from this session — see README.
 const NGX_CORPORATE_ACTIONS_URL = "https://ngxgroup.com/exchange/data/corporate-actions/";
-
-const HEADER_PATTERNS = {
-  symbol: /symbol|company|security/i,
-  dividend: /dividend|amount|per\s*share/i,
-  year: /year|period|financial\s*year/i,
-};
 
 export interface NgxDividendRefreshResult {
   status: "success" | "error" | "no-match";
@@ -31,7 +26,7 @@ export async function refreshNgxDividends(): Promise<NgxDividendRefreshResult> {
   try {
     const html = await fetchHtml(NGX_CORPORATE_ACTIONS_URL);
     const tables = extractTables(html);
-    const match = findMatchingTable(tables, HEADER_PATTERNS, 2); // symbol + dividend is enough; year is a bonus
+    const match = findMatchingTable(tables, NGX_DIVIDEND_HEADERS, 2); // symbol + dividend is enough; year is a bonus
 
     if (!match) {
       result = {

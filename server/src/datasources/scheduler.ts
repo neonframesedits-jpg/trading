@@ -1,10 +1,13 @@
 import { refreshAllDataSources } from "./refreshAll.js";
+import { refreshGdeltNews, refreshRssNews } from "../news/ingest.js";
 
 // Runs once shortly after startup (so a fresh deploy doesn't wait a full
-// day for its first live-data attempt), then daily. NGX/CBN pages don't
-// change intraday in ways this app needs to react to immediately.
+// day for its first live-data attempt), then on two cadences: prices, FX and
+// dividends daily (those pages don't change intraday in ways this app needs
+// to react to), news hourly.
 export function startDataRefreshScheduler() {
-  const DAY = 24 * 60 * 60 * 1000;
+  const HOUR = 60 * 60 * 1000;
+  const DAY = 24 * HOUR;
   const INITIAL_DELAY = 30_000;
 
   setTimeout(() => {
@@ -15,5 +18,10 @@ export function startDataRefreshScheduler() {
     setInterval(() => {
       refreshAllDataSources().catch((err) => console.error("Scheduled data refresh failed:", err));
     }, DAY);
+
+    setInterval(() => {
+      refreshRssNews().catch((err) => console.error("Scheduled RSS refresh failed:", err));
+      refreshGdeltNews().catch((err) => console.error("Scheduled GDELT refresh failed:", err));
+    }, HOUR);
   }, INITIAL_DELAY);
 }

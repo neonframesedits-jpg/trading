@@ -6,6 +6,8 @@ const SOURCE_LABELS: Record<string, string> = {
   "ngx-prices": "NGX share prices",
   "cbn-fx": "CBN USD/NGN exchange rate",
   "ngx-dividends": "NGX dividend declarations",
+  "rss-news": "News feeds (RSS)",
+  "gdelt-news": "Global news search (GDELT)",
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -48,7 +50,7 @@ export function DataStatus() {
       </p>
 
       <div className="mt-4">
-        <Disclaimer text="This pipeline was written to fetch NGX's public price list, CBN's exchange rate page, and NGX's corporate-actions page, but could not be tested against the live pages from the environment this app was built in (outbound web access was blocked there). If every source below shows an error or 'no-match', that's expected until someone runs this with real network access and fixes whatever the live page structure doesn't match." />
+        <Disclaimer text="None of these sources could be reached from the environment this app was built in (outbound web access was blocked there), so none has been confirmed working yet. The news feeds and GDELT use documented formats and are tested against sample data; the NGX and CBN scrapers read web pages whose layout hasn't been seen, so they're the most likely to show 'no-match' and need adjusting. Prices, FX and dividends refresh daily; news hourly. After 'Refresh now', the GDELT search keeps running in the background for a few minutes — reload this page to see its result." />
       </div>
 
       {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
@@ -69,7 +71,7 @@ export function DataStatus() {
           </div>
 
           <div className="mt-4 flex flex-col gap-3">
-            {["ngx-prices", "cbn-fx", "ngx-dividends"].map((source) => {
+            {Object.keys(SOURCE_LABELS).map((source) => {
               const entry = status.sources.find((s) => s.source === source);
               return (
                 <div
@@ -80,7 +82,7 @@ export function DataStatus() {
                     <h3 className="font-semibold">{SOURCE_LABELS[source] ?? source}</h3>
                     <span className="text-xs uppercase tracking-wide">{entry?.status ?? "never run"}</span>
                   </div>
-                  <p className="mt-1 text-sm opacity-90">
+                  <p className="mt-1 text-sm opacity-90 [overflow-wrap:anywhere]">
                     {entry ? entry.message : "No refresh attempt recorded yet — click \"Refresh now\" below."}
                   </p>
                   {entry && (

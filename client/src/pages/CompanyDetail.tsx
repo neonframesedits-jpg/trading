@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { fetchCompany, formatNaira, formatPercent, type CompanyDetailResponse } from "../api";
+import { fetchCompany, fetchCompanyNews, formatNaira, formatPercent, type CompanyDetailResponse, type NewsArticle } from "../api";
+import { NewsList } from "../components/NewsList";
 import { ProgressCircle } from "../components/ProgressCircle";
 import { HistoryChart } from "../components/HistoryChart";
 import { InvestmentCalculator } from "../components/InvestmentCalculator";
@@ -11,14 +12,19 @@ import { scoreColor } from "../components/ScoreBadge";
 export function CompanyDetail() {
   const { id } = useParams<{ id: string }>();
   const [data, setData] = useState<CompanyDetailResponse | null>(null);
+  const [news, setNews] = useState<NewsArticle[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
     setData(null);
+    setNews(null);
     fetchCompany(id)
       .then(setData)
       .catch((e) => setError(e.message));
+    fetchCompanyNews(id)
+      .then((r) => setNews(r.articles))
+      .catch(() => setNews([]));
   }, [id]);
 
   if (error) return <div className="p-8 text-red-400">Failed to load: {error}</div>;
@@ -96,6 +102,24 @@ export function CompanyDetail() {
               Latest dividend/share: <span className="text-white">{formatNaira(history[history.length - 1].dividend_per_share)}</span>
             </span>
           </div>
+        </div>
+      </section>
+
+      <section className="mt-8">
+        <h2 className="text-lg font-semibold text-white">In the news</h2>
+        <p className="mt-1 text-sm text-neutral-400">
+          Articles that mention {company.name}, matched by name. Check the source badge before acting on anything.
+        </p>
+        <div className="mt-3">
+          {news === null ? (
+            <p className="text-sm text-neutral-400">Loading…</p>
+          ) : (
+            <NewsList
+              articles={news}
+              showCompanies={false}
+              emptyText="No articles found yet. News is collected hourly once the app is running with internet access."
+            />
+          )}
         </div>
       </section>
 

@@ -6,7 +6,19 @@ import { db } from "./db.js";
 
 export const dataRouter = Router();
 
+// This endpoint is public once deployed, so without a cooldown anyone could
+// hammer NGX/CBN through the server and get its IP blocked.
+const MANUAL_REFRESH_COOLDOWN_MS = 10 * 60 * 1000;
+let lastManualRefreshAt = 0;
+
 dataRouter.post("/refresh", async (_req, res) => {
+  const waitMs = lastManualRefreshAt + MANUAL_REFRESH_COOLDOWN_MS - Date.now();
+  if (waitMs > 0) {
+    return res.status(429).json({
+      error: `A refresh ran recently — try again in ${Math.ceil(waitMs / 60000)} minute(s).`,
+    });
+  }
+  lastManualRefreshAt = Date.now();
   const result = await refreshAllDataSources();
   res.json(result);
 });

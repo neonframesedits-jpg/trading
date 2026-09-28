@@ -2,16 +2,12 @@ import { db } from "../db.js";
 import { fetchHtml } from "./fetchHtml.js";
 import { extractTables, findMatchingTable, parseNumeric } from "./parseTable.js";
 import { logRefresh } from "./refreshLog.js";
+import { NGX_PRICE_HEADERS } from "./headerPatterns.js";
 
 // NGX publishes a free public equities price list (no API key required),
 // distinct from their paid Market Data API. Unverified from this session
 // (outbound access blocked) — see README before relying on this.
 const NGX_PRICE_LIST_URL = "https://ngxgroup.com/exchange/data/equities-price-list/";
-
-const HEADER_PATTERNS = {
-  symbol: /symbol|ticker/i,
-  price: /close|price/i,
-};
 
 export interface NgxPriceRefreshResult {
   status: "success" | "error" | "no-match";
@@ -30,12 +26,12 @@ export async function refreshNgxPrices(): Promise<NgxPriceRefreshResult> {
   try {
     const html = await fetchHtml(NGX_PRICE_LIST_URL);
     const tables = extractTables(html);
-    const match = findMatchingTable(tables, HEADER_PATTERNS);
+    const match = findMatchingTable(tables, NGX_PRICE_HEADERS);
 
     if (!match) {
       result = {
         status: "no-match",
-        message: "No table on the page matched expected symbol/price headers. The page structure has likely changed since this was written — inspect the live HTML and update HEADER_PATTERNS or the parsing logic in ngxPrices.ts.",
+        message: "No table on the page matched expected symbol/price headers. The page structure has likely changed since this was written — inspect the live HTML and update NGX_PRICE_HEADERS in headerPatterns.ts or the parsing logic in ngxPrices.ts.",
         matched: 0,
         updated: 0,
         unmatchedSymbols: [],
